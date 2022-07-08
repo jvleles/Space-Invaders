@@ -1,0 +1,739 @@
+<div id="stage">
+    <div class="telajogo">
+        <div class="vidas">
+            <img class="vida3" src="imagens/canhao.png" alt="#"> 
+            <img class="vida2" src="imagens/canhao.png" alt="#">
+            <img class="vida1" src="imagens/canhao.png" alt="#">
+        </div>
+    </div>
+    <style>
+        body{
+            margin:0; 
+        }
+    </style>
+    <p
+    style="position: fixed; z-index: 10; color: white; right: 1180px; bottom: 160px; font-family: sans-serif; font-size: 14px;"
+    >
+      <span>Score:</span> <span id="scoreEl">0</span></p>
+    <canvas id="tela" width="400" height="600"></canvas>
+    <canvas id="fundo" width="400" height="600"></canvas>
+    
+</div> 
+
+<style>
+    #stage {
+        width: 480px;height: 320px;position: relative;
+    }
+
+    canvas {
+        position: absolute;
+    }
+
+    #tela {
+        z-index: 2;
+    }
+    
+    .e {
+        position: absolute;
+    }
+
+    .telajogo {
+        width: 400px;height: 600px;position: absolute;
+        
+    }
+    
+    @keyframes some {
+        0% {opacity: 0;}
+        25% {opacity: 1;}
+        50% {opacity: 0;}
+        75% {opacity: 1;}
+        100% {opacity: 0;transform: translateX(0) scale(0.5);}
+        from {
+        transform: translateY(0px);
+    }
+    to {
+        transform: translateY(-1px);
+    }
+    }
+
+    .vidas {
+        position: absolute;z-index: 3;bottom: 0px;left: 10px;
+    }
+    
+    .PerdeuUmaVida {
+        animation: some 1s ease-in-out;
+    }
+
+    .TirarVidaDaTela {
+        opacity: 0;
+    }
+
+</style>
+
+
+<script>
+// Space Invaders
+// Autor: Ayo Oyewole
+// Adaptado por: Gilson Pereira
+// Código fonte original: http://www.ayodeji.ca/space-invaders/
+
+// Programa principal
+const t_naveVermelhaBonusX = document.querySelector('.naveVermelhaBonusX');
+const t_naveVermelhaBonusY = document.querySelector('.naveVermelhaBonusY');
+const t_laserX = document.querySelector('.laserX');
+const t_laserY = document.querySelector('.laserY');
+const elementosVidas = document.querySelector('.vidas');
+const vida1 = document.querySelector('.vida1');
+const vida2 = document.querySelector('.vida2');
+const vida3 = document.querySelector('.vida3');
+const t_naveVermelhaBonusApareceu = document.querySelector('.naveVermelhaBonusApareceu');
+const scoreEl = document.querySelector('#scoreEl')
+
+//efeitos de som
+const invasorMorre = new Audio();
+invasorMorre.src = './sounds/invaderkilled.wav'
+const tiroDisparadoDoCanhao = new Audio();
+tiroDisparadoDoCanhao.src = './sounds/shoot.wav'
+const ovniPassa = new Audio();
+ovniPassa.src = './sounds/ufo.wav'
+const gameOver = new Audio();
+gameOver.src = './sounds/fimdejogo.wav'
+const somOvniAtingido = new Audio();
+somOvniAtingido.src = './sounds/bonus.wav'
+const canhaoAtingido = new Audio();
+canhaoAtingido.src = './sounds/explosion.wav'
+const ganhouJogo = new Audio();
+ganhouJogo.src = './sounds/victory.wav'
+const inimigoSom = new Audio();
+inimigoSom.src = './sounds/sonEne4.wav'
+
+var tela;
+var c;
+var fundoc;
+
+var canhao;
+var laser;
+var alien;
+var fundo;
+var fundoImagem;
+
+var canhaoX = 180;
+var canhaoY = 529;
+var laserX = 193;
+var laserY = 520;
+var alienX = 0;
+var alienY = 0;
+var inicioLaser = false;
+var impactoLaserX;
+var laserMovendo;
+var intervalo = 30;
+var posicao = 0;
+var metadeDoAlienX = 5;
+var tiroAlienX = 0;
+var tiroAlienY = 0;
+var movimentoTiroAlien;
+var alienAtirou = false;
+var vidas = 3;
+var naveVermelhaBonusX = 399;
+var naveVermelhaBonusY = 15;
+var naveVermelhaBonusAparecer;
+var temponaveVermelhaBonus = 0;
+var naveVermelhaBonusComecou = false
+var naveVermelhaBonusEsquerda = false;
+var naveVermelhaBonusDireita = false;
+var acertounaveVermelhaBonus = false;
+var score = 0
+var posicaoPonto
+var pontosNaveVermelha = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150]
+
+var alienLinhas = [10, 38, 66, 94, 122, 150, 178, 206, 234, 262, 290];
+var alienColunas = [55, 85, 115, 145, 175];
+var aliensRestantes = [];
+var aliensNoCampo = 55
+
+const C_ALTURA = 600;
+const C_LARGURA = 400;
+
+const TECLA_ESQUERDA = 37;
+const TECLA_DIREITA = 39;
+const TECLA_ACIMA = 38;
+const TECLA_ENTER = 13;
+
+var auxR;
+var jogadorJogando;
+if(JSON.parse(localStorage.getItem("ranking")) == null){
+    var jogadores = [];
+}else{
+    var jogadores = JSON.parse(localStorage.getItem("ranking"));
+}
+
+
+var nomeJogador = prompt("Insira seu nome");
+
+iniciar(); // Chama função inicial do jogo
+
+
+// Sub-rotinas (funções)
+
+
+// Iniciando Jogo
+function iniciar() {
+    tela = document.getElementById("tela");
+    fundo = document.getElementById("fundo");
+    fundoc = fundo.getContext("2d");
+
+    c = tela.getContext("2d");
+    
+    posicionarAlien();
+    carregarImagens();
+    
+	intervalo_moverAliens = setInterval("moverAliens()", intervalo);
+    intervalo_alienAtingido = setInterval("alienAtingido()", 6);
+    
+    naveVermelhaBonusAparecer = setInterval(defineChanceAparecernaveVermelhaBonus, 5000);
+    temponaveVermelhaBonus = setInterval(movernaveVermelhaBonus, 18);
+}
+    
+// Colocando Aliens
+function posicionarAlien() {
+    for (var i = 0; i < alienLinhas.length; i++){
+        for (var j = 0; j < alienColunas.length; j++){
+            var novoAlien = {
+                posX : alienLinhas[i],
+                posY : alienColunas[j],
+                foiAtingido : false
+			};
+			
+            aliensRestantes[aliensRestantes.length] = novoAlien;
+        }
+    }
+}
+
+// Carregando Imagens
+function carregarImagens() {
+    canhao = new Image();
+    canhao.src = "imagens/canhao.png";
+    canhao.onload = function(){
+        c.drawImage(canhao, canhaoX, canhaoY);
+    }
+    
+    laser = new Image();
+    laser.src = "imagens/laser.png";
+    
+    alien = new Image();
+    alien.src = "imagens/inimigo1.png";
+
+    alien2 = new Image();
+    alien2.src = "imagens/inimigo2.png";
+
+    alien3 = new Image();
+    alien3.src = "imagens/inimigo3.png";
+
+    tiroAlien = new Image();
+    tiroAlien.src = "imagens/tiroAlien.png"
+
+    naveVermelhaBonus = new Image();
+    naveVermelhaBonus.src = "imagens/ovni.png"
+
+    fundoImagem = new Image()
+    fundoImagem.src = "imagens/fundo.png";
+    fundoImagem.onload = function(){
+        fundoc.drawImage(fundoImagem, 0, 0);
+    }
+}
+
+// Movendo Aliens
+function moverAliens(){
+    if (posicao <= 65){
+        alienX += 1;
+        inimigoSom.play(); 
+        posicao += 1;
+    } else if ((posicao > 65) && (posicao <= 80)){
+        alienX += 1;
+        inimigoSom.play();
+        alienY += 1
+        posicao += 1;            
+    } else if ((posicao > 80) && (posicao <= 147)){
+        alienX -= 1;
+        inimigoSom.play();
+        posicao += 1;
+    } else if ((posicao > 147) && (posicao < 162)){
+        alienX -= 1;
+        inimigoSom.play();
+        alienY += 1;
+        posicao += 1;
+    } else {
+        posicao = 0;
+    }
+    
+    
+
+    for (var i = 0; i < aliensRestantes.length; i++){
+
+        if (!aliensRestantes[i].foiAtingido){
+            if (aliensRestantes[i].posY == 55 || aliensRestantes[i].posY == 85) {
+                c.clearRect((alienX + aliensRestantes[i].posX - 1), (alienY + aliensRestantes[i].posY - 1), 20, 25);
+                c.drawImage(alien3, (alienX + aliensRestantes[i].posX), (alienY + aliensRestantes[i].posY));
+            } else if (aliensRestantes[i].posY == 115 || aliensRestantes[i].posY == 145) {
+                c.clearRect((alienX + aliensRestantes[i].posX - 1), (alienY + aliensRestantes[i].posY - 1), 20, 25);
+                c.drawImage(alien2, (alienX + aliensRestantes[i].posX), (alienY + aliensRestantes[i].posY));
+            } else {
+                c.clearRect((alienX + aliensRestantes[i].posX - 1), (alienY + aliensRestantes[i].posY - 1), 20, 25);
+                c.drawImage(alien, (alienX + aliensRestantes[i].posX), (alienY + aliensRestantes[i].posY));
+            }
+            
+            if ((aliensRestantes[i].posY + alienY + 23) >= 530){
+                fimDeJogo();
+            }
+        }
+    }
+
+    for (let i = 0; i < aliensRestantes.length; i++) {
+        if (!aliensRestantes[i].foiAtingido){
+            tiroAlienSempreDaUltimaLinha();
+            break;
+        }
+    }
+}
+
+// Matando Aliens
+function alienAtingido(){
+    for(var i = 0; i < aliensRestantes.length; i++){
+        if ((laserY >= alienY + aliensRestantes[i].posY) 
+                && (laserY <= (alienY + aliensRestantes[i].posY + 20)) 
+                && (impactoLaserX >= (alienX + aliensRestantes[i].posX - 5)) 
+                && (impactoLaserX <= (alienX + aliensRestantes[i].posX + 18))){
+
+            if (!aliensRestantes[i].foiAtingido){
+                if (aliensRestantes[i].posY == 55 || aliensRestantes[i].posY == 85) {
+                    score += 40;
+                    scoreEl.innerHTML = score
+                }
+                if (aliensRestantes[i].posY == 115 || aliensRestantes[i].posY == 145) {
+                    score += 20;
+                    scoreEl.innerHTML = score
+                }
+                if (aliensRestantes[i].posY == 175) {
+                    score += 10;
+                    scoreEl.innerHTML = score
+                }
+            }        
+            if (!aliensRestantes[i].foiAtingido){
+                invasorMorre.play();
+                c.clearRect((alienX + aliensRestantes[i].posX - 1), (alienY + aliensRestantes[i].posY - 1), 20, 25);
+                aliensRestantes[i].foiAtingido = true;
+                aliensNoCampo--
+                c.clearRect(impactoLaserX, laserY, 6, 19);
+                laserY = 0;
+                ganhou();
+            }
+            if (aliensNoCampo === 45) {
+                intervalo = 25
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            } 
+            else if (aliensNoCampo === 35) {
+                intervalo = 20
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            } 
+            else if (aliensNoCampo === 25) {
+                intervalo = 15
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            } 
+            else if (aliensNoCampo === 15) {
+                intervalo = 10
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            }
+            else if (aliensNoCampo === 10) {
+                intervalo = 12
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            } 
+            else if (aliensNoCampo === 5) {
+                intervalo = 7
+                clearInterval(intervalo_moverAliens)
+                intervalo_moverAliens = setInterval("moverAliens()", intervalo)
+            }
+        }
+    }
+}
+
+// Ganhou o jogo
+function ganhou() {
+    for (let i = 0; i < aliensRestantes.length; i++) {
+        if (!aliensRestantes[i].foiAtingido) {
+            return false;
+        }
+    }
+    score += vidas*50
+    fimDeJogoGanha(); 
+}
+
+//Fim de jogo quando ganhar
+function fimDeJogoGanha(){
+    inimigoSom.src = './sounds/sonEn.wav'
+    registrarJogador();
+    rankingSort();
+    var top1 = "1° Lugar: " + jogadores[0].nome + " " + jogadores[0].score
+    var top2 = "2° Lugar: " + jogadores[1].nome + " " + jogadores[1].score
+    var top3 = "3° Lugar: " + jogadores[2].nome + " " + jogadores[2].score
+    var top4 = "4° Lugar: " + jogadores[3].nome + " " + jogadores[3].score
+    var top5 = "5° Lugar: " + jogadores[4].nome + " " + jogadores[4].score
+    clearInterval(naveVermelhaBonusAparecer);
+    laserX = 193;
+    laserY = 520;
+    alienX = 0;
+    alienY = 0;
+    posicao = 0;
+    naveVermelhaBonusX = 0;
+    naveVermelhaBonusY = 0;
+    aliensRestantes = [];
+    inicioLaser = false;
+    alienAtirou = false;
+    naveVermelhaBonusComecou = false;
+    tiroAlienY = 650;
+    elementosVidas.style.display = 'none';
+    c.fillStyle = "black";
+	c.fillRect(0, 0, C_LARGURA, C_ALTURA);
+    
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText("Você Ganhou!", C_LARGURA/2, 200);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText("RANKING:", C_LARGURA/2, 230);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top1, C_LARGURA/2, 260);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top2, C_LARGURA/2, 290);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top3, C_LARGURA/2, 320);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top4, C_LARGURA/2, 350);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top5, C_LARGURA/2, 380);
+
+    ganhouJogo.play();
+    onkeydown = null;
+}
+
+// Fim do jogo quando perder
+function fimDeJogo() {
+    inimigoSom.src = './sounds/sonEn.wav'
+    registrarJogador();
+    rankingSort();
+    var top1 = "1° Lugar: " + jogadores[0].nome + " " + jogadores[0].score
+    var top2 = "2° Lugar: " + jogadores[1].nome + " " + jogadores[1].score
+    var top3 = "3° Lugar: " + jogadores[2].nome + " " + jogadores[2].score
+    var top4 = "4° Lugar: " + jogadores[3].nome + " " + jogadores[3].score
+    var top5 = "5° Lugar: " + jogadores[4].nome + " " + jogadores[4].score
+    clearInterval(naveVermelhaBonusAparecer);
+    laserX = 193;
+    laserY = 520;
+    alienX = 0;
+    alienY = 0;
+    posicao = 0;
+    naveVermelhaBonusX = 0;
+    naveVermelhaBonusY = 0;
+    aliensRestantes = [];
+    inicioLaser = false;
+    alienAtirou = false;
+    naveVermelhaBonusComecou = false;
+    tiroAlienY = 650;
+    elementosVidas.style.display = 'none';
+	
+    c.fillStyle = "black";
+	c.fillRect(0, 0, C_LARGURA, C_ALTURA);
+    
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText("Fim de Jogo", C_LARGURA/2, 200); // 200 / 300
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText("RANKING:", C_LARGURA/2, 230);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top1, C_LARGURA/2, 260);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top2, C_LARGURA/2, 290);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top3, C_LARGURA/2, 320);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top4, C_LARGURA/2, 350);
+
+    c.textAlign = "center";
+    c.font = "24px Koulen Regular";
+    c.fillStyle = "white";
+    c.fillText(top5, C_LARGURA/2, 380);
+    
+    gameOver.play();
+    onkeydown = null;
+    console.log(jogadores)
+}
+
+// Movendo canhão
+var map = {};
+onkeydown = onkeyup = function(moverCanhao){
+    map[moverCanhao.keyCode] = moverCanhao.type == 'keydown';
+
+    if (map[TECLA_ESQUERDA]) {
+        if (canhaoX >= 9){
+            c.clearRect(canhaoX, 530, 31, 30);
+            canhaoX -= 8;
+            laserX -= 8;
+            c.drawImage(canhao, canhaoX, canhaoY);
+        }
+    }
+
+    if (map[TECLA_DIREITA]) {
+        if (canhaoX <= 360) {
+            c.clearRect(canhaoX, 530, 31, 30);
+            canhaoX += 8;
+            laserX += 8;
+            c.drawImage(canhao, canhaoX, canhaoY);
+        }
+    }
+
+    if (map[TECLA_ACIMA]) {
+        if (!inicioLaser) {
+            inicioLaser = true;
+            c.drawImage(laser, laserX, laserY);
+            impactoLaserX = laserX;
+            laserMovendo = setInterval("dispararLaser()", 10);
+        }   
+    }
+}
+
+// Laser Canhao
+function dispararLaser(){
+    if (inicioLaser && (laserY >= 0)){
+        tiroDisparadoDoCanhao.play();
+        laserY -= 20;
+        c.clearRect(impactoLaserX, (laserY + 20), 6, 12);
+		
+        if (laserY >= 0){
+            c.drawImage(laser, impactoLaserX, laserY);
+        }
+    }
+	
+    if (laserY < 0){
+        clearInterval(laserMovendo);
+        inicioLaser = false;
+        laserY = 520;
+    }
+}
+
+// Tiro Alien
+function disparatiroAlien(alienAtual, posX){
+    c.clearRect((posX), (tiroAlienY - 37), 10, 27);
+    c.drawImage(tiroAlien, posX, tiroAlienY - 27);
+    tiroAlienY += 10;
+
+    if(tiroAlienAcertouCanhao()) {
+        clearInterval(movimentoTiroAlien);
+        alienAtirou = false;
+        c.clearRect((posX), (tiroAlienY - 37), 10, 27);
+        if (vidas != 0) {
+            c.drawImage(canhao, canhaoX, canhaoY);
+        }
+    }
+    perdeVida();
+    
+    if (tiroAlienY >= 635) {
+        clearInterval(movimentoTiroAlien);
+        alienAtirou = false;
+        tiroAlienY = alienY + alienAtual.posY + 33;
+    }
+}   
+
+// Qual alien atira
+function defineAtirador() {
+    const colunaAliensQueAtira = Math.floor(Math.random() * alienLinhas.length);
+
+    for (let j = alienColunas.length - 1; j >= 0; j--) {
+        const linhaAtual = j % 5;
+        const indiceAlienAtual = colunaAliensQueAtira * 5 + linhaAtual;
+        alienAtual = aliensRestantes[indiceAlienAtual];
+        if (!alienAtual.foiAtingido) {
+            return alienAtual;
+            c.drawImage(tiroAlien, metadeDoAlienX + alienAtual.posX, alienAtual.posY + 33 + tiroAlienY);
+        } 
+    }
+    return defineAtirador();
+}
+
+// Canhao levou tiro
+function tiroAlienAcertouCanhao(){
+    if ((tiroAlienY - 27 >= canhaoY) 
+            && (tiroAlienY - 27 <= canhaoY + 30) 
+            && (tiroAlienX >= canhaoX - 5)
+            && (tiroAlienX <= canhaoX + 25)){
+        vidas--;
+        if(vidas === 0) {
+            fimDeJogo();
+        }
+        return true;
+    }
+    return false;
+}
+
+// So o primeiro alien atira
+function tiroAlienSempreDaUltimaLinha(){
+    if (!alienAtirou) {
+        var alienAtual = defineAtirador();
+        alienAtirou = true;
+        tiroAlienY = alienY + alienAtual.posY + 68;
+        tiroAlienX = alienX + alienAtual.posX + metadeDoAlienX;
+        movimentoTiroAlien = setInterval(disparatiroAlien, 40, alienAtual, tiroAlienX);
+    }
+}
+
+// Perdendo vida
+function perdeVida() {
+    if (vidas === 2) {
+        vida1.classList.add("PerdeuUmaVida", "TirarVidaDaTela");
+    }
+    if (vidas === 1) {
+        vida2.classList.add("PerdeuUmaVida", "TirarVidaDaTela");
+    }
+    if (vidas === 0) {
+        vida3.classList.add("TirarVidaDaTela");
+    }
+}
+// Movimento nave vermelha
+function movernaveVermelhaBonus() {
+    if(!naveVermelhaBonusComecou) return;
+
+    laserAcertounaveVermelhaBonus()
+
+    if (naveVermelhaBonusEsquerda) {
+        naveVermelhaBonusX += 3;
+    } 
+
+    if(naveVermelhaBonusX > 400 && naveVermelhaBonusEsquerda) {
+        naveVermelhaBonusComecou = false;
+    }
+
+    if(naveVermelhaBonusDireita) {
+        naveVermelhaBonusX -= 3;
+    }
+
+    if(naveVermelhaBonusX < -52 && naveVermelhaBonusDireita) {
+        naveVermelhaBonusComecou = false;
+    }
+    
+    const trajetoria = naveVermelhaBonusEsquerda ? -3 : 3;
+
+    if(acertounaveVermelhaBonus) return;
+
+    c.clearRect(naveVermelhaBonusX + trajetoria, naveVermelhaBonusY, 52, 37);
+    c.drawImage(naveVermelhaBonus, naveVermelhaBonusX, naveVermelhaBonusY);
+}
+
+// De onde a nave vermelha aparece
+function naveVermelhaEsquerdaOuDireita() {
+    naveVermelhaBonusComecou = true;
+    acertounaveVermelhaBonus = false;
+    let comecarounao = Math.floor(Math.random() * 2);
+    ovniPassa.play();
+    if (comecarounao === 1) {
+        naveVermelhaBonusX = 0;
+        naveVermelhaBonusEsquerda = true;
+        naveVermelhaBonusDireita = false;
+    } else {
+        naveVermelhaBonusDireita = true;
+        naveVermelhaBonusEsquerda = false;
+        naveVermelhaBonusX = 400;
+    }
+}
+
+// Chance da nave vermelha aparecer
+function defineChanceAparecernaveVermelhaBonus() {
+    if(naveVermelhaBonusComecou) return;
+
+    let chancenaveVermelhaBonusAparecer = parseFloat(Math.random().toFixed(1));
+    if(chancenaveVermelhaBonusAparecer <= 0.2) {
+        naveVermelhaEsquerdaOuDireita();
+    }
+}
+
+// Se acertou a nave vermelha
+function laserAcertounaveVermelhaBonus(){
+    if ((laserY <= naveVermelhaBonusY + 30 && laserY !== 0) && (laserY >= naveVermelhaBonusY) && (impactoLaserX >= naveVermelhaBonusX) && (impactoLaserX + 6 <= naveVermelhaBonusX + 55)) {
+        posicaoPonto = Math.floor(Math.random() * (10 + 1))
+        score += pontosNaveVermelha[posicaoPonto];
+        scoreEl.innerHTML = score
+        somOvniAtingido.play();           
+    }
+    
+    if ((laserY <= naveVermelhaBonusY + 30 && laserY !== 0) && (laserY >= naveVermelhaBonusY) && (impactoLaserX >= naveVermelhaBonusX) && (impactoLaserX + 6 <= naveVermelhaBonusX + 55)) {
+        acertounaveVermelhaBonus = true;
+        c.clearRect(naveVermelhaBonusX - 1, naveVermelhaBonusY - 1, 400, 37);
+        naveVermelhaBonusComecou = false;
+        c.clearRect(impactoLaserX, laserY, 6, 19);
+        laserY = 0;
+        somOvniAtingido.play(); 
+    }
+}
+
+function criarJogador(nome, score) {
+    return {
+        nome: nome,
+        score: score
+    }
+}
+
+function registrarJogador() {
+    jogadorJogando = criarJogador(nomeJogador.toUpperCase(), score);
+    jogadores.push(jogadorJogando)
+    localStorage.setItem("ranking", JSON.stringify(jogadores));
+}
+
+function rankingSort() {
+    for(var i = 0; i < jogadores.length; i++){
+        for(var j = 0; j < (jogadores.length - i - 1); j++){
+            if(jogadores[j].score < jogadores[j + 1].score){
+                auxR = jogadores[j]
+                jogadores[j] = jogadores[j + 1]
+                jogadores[j + 1] = auxR
+            }
+        }
+    }
+    localStorage.setItem("ranking", JSON.stringify(jogadores));
+}
+</script>
